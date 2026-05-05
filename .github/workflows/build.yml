@@ -1,30 +1,51 @@
-name: Build llama.cpp CUDA for GTX950M
+name: Build llama.cpp CUDA 12.5 Docker (sm_50)
+
 on:
   workflow_dispatch:
 
 jobs:
   build:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      
     steps:
-      - name: Checkout llama.cpp
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           repository: ggerganov/llama.cpp
           submodules: recursive
 
-      - name: Install dependencies
-        run: sudo apt update && sudo apt install -y cmake build-essential
+      # 安装 CUDA 12.5
+      - name: Install CUDA 12.5
+        run: |
+          wget https://developer.download.nvidia.com/compute/cuda/12.5.0/local_installers/cuda_12.5.0_555.42.06_linux.run
+          sudo sh cuda_12.5.0_555.42.06_linux.run --toolkit --silent
+          echo "PATH=/usr/local/cuda-12.5/bin:$PATH" >> $GITHUB_ENV
 
-      - name: Build llama.cpp (GPU sm_50)
+      # 编译：支持 GTX950M (sm_50)
+      - name: Build llama.cpp
         run: |
           cmake -B build -DGGML_CUDA=ON -DCMAKE_CUDA_ARCHITECTURES=50
           make -C build -j4
 
-      - name: Package binaries
-        run: cd build/bin && tar -zcvf llama-cuda-sm50.tar.gz ./*
+      # 创建极简 Docker 镜像
+      - name: Build Docker Image
+        run: |
+          cd build/bin
+          echo 'FROM ubuntu:22.04' > Dockerfile
+          echo 'COPY ./* /usr/local/bin/' >> Dockerfile
+          docker build -t llama-cuda12.5-sm50 .
 
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
+      # 上传到 GitHub 容器仓库
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
         with:
-          name: llama-cuda
-          path: build/bin/llama-cuda-sm50.tar.gz
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push Docker Image
+        run: |
+          IMAGE_ID=ghcr.io/${{ github.actor_llama }}/llama-cuda12.5-sm50
+          docker tag llama-cuda12.5-sm50 $IMAGE_ID
+          docker push $IMAGE_ID
