@@ -17,7 +17,7 @@ WORKDIR /llama
 RUN cmake -B build \
     -DGGML_CUDA=ON \
     -DCMAKE_CUDA_ARCHITECTURES=50 \  # 这一行是 GTX950M 的命门
-    -DCMAKE_BUILD_TYPE=Release
+    -DCMAKE_BUILD_TYPE=Release \
 
 # 4. 编译 llama-server
 RUN cmake --build build --config Release -j$(nproc)
