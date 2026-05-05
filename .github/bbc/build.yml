@@ -1,0 +1,36 @@
+name: Build llama.cpp CUDA 13.0
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout llama.cpp
+        uses: actions/checkout@v4
+        with:
+          repository: ggerganov/llama.cpp
+          submodules: recursive
+
+      # 正确、无警告、官方支持的 CUDA 安装
+      - name: Setup CUDA 13.0
+        uses: Jimver/cuda-toolkit@v0.2.11
+        with:
+          cuda: '13.0'  # 这里修好了！不是 cuda-version
+          sub-packages: '["nvcc","cudart"]'
+
+      - name: Build
+        run: |
+          cmake -B build -DGGML_CUDA=ON -DCMAKE_CUDA_ARCHITECTURES=50
+          make -C build -j4
+
+      - name: Package
+        run: |
+          cd build/bin
+          tar -zcvf llama-cuda13-sm50.tar.gz ./*
+
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: llama-cuda13
+          path: build/bin/llama-cuda13-sm50.tar.gz
