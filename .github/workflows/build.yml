@@ -1,36 +1,42 @@
-name: Build llama.cpp CUDA 13.0
+name: Build llama.cpp CUDA 13.0 for GTX950M
 on:
   workflow_dispatch:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
-      - name: Checkout llama.cpp
+      - name: 下载 llama.cpp 源码
         uses: actions/checkout@v4
         with:
           repository: ggerganov/llama.cpp
           submodules: recursive
 
-      # 正确、无警告、官方支持的 CUDA 安装
-      - name: Setup CUDA 13.0
-        uses: Jimver/cuda-toolkit@v0.2.11
-        with:
-          cuda: '13.0'  # 这里修好了！不是 cuda-version
-          sub-packages: '["nvcc","cudart"]'
+      - name: 安装编译依赖
+        run: sudo apt update && sudo apt install -y cmake build-essential
 
-      - name: Build
+      # 直接安装 CUDA 13.0 (你的 580 驱动完美匹配)
+      - name: 安装 CUDA 13.0
+        run: |
+          wget --no-tries-cookies https://developer.download.nvidia.com/compute/cuda/13.0.0/local_installers/cuda_13.0.0_530.30.02_linux.run
+          sudo sh cuda_13.0.0_530.30.02_linux.run --toolkit --silent
+          echo "PATH=/usr/local/cuda-13.0/bin:$PATH" >> $GITHUB_ENV
+
+      # 编译：CUDA13 + GTX950M 算力50
+      - name: 编译 llama.cpp
         run: |
           cmake -B build -DGGML_CUDA=ON -DCMAKE_CUDA_ARCHITECTURES=50
           make -C build -j4
 
-      - name: Package
+      # 打包
+      - name: 打包二进制
         run: |
           cd build/bin
-          tar -zcvf llama-cuda13-sm50.tar.gz ./*
+          tar -zcvf llama-cuda13.0-sm50.tar.gz ./*
 
-      - name: Upload
+      # 上传成品
+      - name: 上传文件
         uses: actions/upload-artifact@v4
         with:
           name: llama-cuda13
-          path: build/bin/llama-cuda13-sm50.tar.gz
+          path: build/bin/llama-cuda13.0-sm50.tar.gz
