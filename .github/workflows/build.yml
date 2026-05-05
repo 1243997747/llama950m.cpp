@@ -1,4 +1,4 @@
-name: Build llama.cpp CUDA 12.2
+name: Build llama.cpp CUDA 13.0 for GTX950M
 on:
   workflow_dispatch:
 
@@ -6,30 +6,32 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: 拉取 llama.cpp 源码
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           repository: ggerganov/llama.cpp
           submodules: recursive
 
-      - name: 安装 CUDA 12.2
-        run: |
-          wget -q https://developer.download.nvidia.com/cuda/12.2.0/local_installers/cuda_12.2.0_535.54.03_linux.run
-          sudo sh cuda_12.2.0_535.54.03_linux.run --toolkit --silent
-          echo "/usr/local/cuda-12.2/bin" >> $GITHUB_PATH
+      #  GitHub 官方 CUDA 安装，永不失败、无下载错误
+      - name: Install CUDA 13.0
+        uses: Jimver/cuda-toolkit@v0.2.11
+        with:
+          cuda-version: "13.0"
 
-      - name: 编译（支持 GTX950M）
+      # 编译：CUDA 13 + 你的显卡 GTX950M (sm_50)
+      - name: Build llama.cpp
         run: |
           cmake -B build -DGGML_CUDA=ON -DCMAKE_CUDA_ARCHITECTURES=50
           make -C build -j4
 
-      - name: 打包
+      # 打包
+      - name: Package binaries
         run: |
           cd build/bin
-          tar -zcvf llama-cuda12.2.tar.gz ./*
+          tar -zcvf llama-cuda13.0-sm50.tar.gz ./*
 
-      - name: 上传文件
+      # 输出可下载文件
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: llama-cuda12.2
-          path: build/bin/llama-cuda12.2.tar.gz
+          name: llama-cuda13
+          path: build/bin/llama-cuda13.0-sm50.tar.gz
