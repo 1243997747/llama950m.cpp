@@ -38,6 +38,7 @@ RUN cmake -B build \
         -DCMAKE_CUDA_ARCHITECTURES=50 \
         -DGGML_BLAS=ON \
         -DGGML_NATIVE=OFF \
+        -DGGML_BACKEND_DL=ON \
         -DGGML_CPU_ALL_VARIANTS=ON \
         -DCMAKE_BUILD_TYPE=Release \
     && cmake --build build --config Release -j"$(nproc)" \
@@ -61,6 +62,8 @@ COPY --from=builder /opt/llama.cpp/build/bin/ /app/bin/
 
 WORKDIR /app
 ENV PATH="/app/bin:${PATH}"
+# BACKEND_DL 模式下 CPU/CUDA 后端为动态库，需在 PATH 里可寻址
+ENV LD_LIBRARY_PATH="/app/bin"
 EXPOSE 8080
 
 # 默认启动 llama-server, 参数在 docker run 时追加
