@@ -77,6 +77,8 @@ jobs:
         with:
           context: .
           push: true
+          # load=true 同时把镜像导入本地 daemon，供下方 docker save 导出
+          load: true
           tags: |
             ${{ env.REGISTRY }}/${{ steps.image.outputs.name }}:latest
             ${{ env.REGISTRY }}/${{ steps.image.outputs.name }}:cuda-${{ steps.args.outputs.cuda }}
