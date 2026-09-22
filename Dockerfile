@@ -22,6 +22,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         git \
         cmake \
         build-essential \
+        pkg-config \
         libgomp1 \
         libopenblas-dev \
     && rm -rf /var/lib/apt/lists/*
@@ -36,6 +37,8 @@ RUN cmake -B build \
         -DGGML_CUDA=ON \
         -DCMAKE_CUDA_ARCHITECTURES=50 \
         -DGGML_BLAS=ON \
+        -DGGML_NATIVE=OFF \
+        -DGGML_CPU_ALL_VARIANTS=ON \
         -DCMAKE_BUILD_TYPE=Release \
     && cmake --build build --config Release -j"$(nproc)" \
         --target llama-server llama-cli
